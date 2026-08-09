@@ -12,12 +12,12 @@ import type {
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 
-const app = express();
+export const app = express();
 app.use(express.json());
 
 //In memory database
 
-const users: User[] = [
+export const users: User[] = [
   {
     id: "u1",
     userName: "Satyam",
@@ -29,29 +29,34 @@ const users: User[] = [
   },
 ];
 
-const stocks: Stock[] = [
+export const stocks: Stock[] = [
   { id: "s1", title: "Reliance Industries", symbol: "RELIANCE" },
   { id: "s2", title: "Tata Consultancy Services", symbol: "TCS" },
 ];
 
-const orders: Order[] = [];
-const fills: Fill[] = [];
+export const orders: Order[] = [];
+export const fills: Fill[] = [];
 
-const orderBook: OrderBook = {
-  "Reliance Industries": {
-    asks: [],
-    bids: [],
-  },
+export const orderBook: OrderBook = {
+  RELIANCE: { asks: [], bids: [] },
+  TCS: { asks: [], bids: [] },
 };
 
 //helper functions
-function findPriceIndex(levels: PriceLevel[], price: number): number {
+function findPriceIndex(
+  levels: PriceLevel[],
+  price: number,
+  ascending: boolean,
+): number {
   let lo = 0,
     hi = levels.length - 1;
   while (lo <= hi) {
     const mid = (lo + hi) >>> 1;
-    if (levels[mid].price === price) return mid;
-    if (levels[mid].price < price) lo = mid + 1;
+    if (levels[mid]!.price === price) return mid;
+    const shouldGoRight = ascending
+      ? levels[mid]!.price < price
+      : levels[mid]!.price > price;
+    if (shouldGoRight) lo = mid + 1;
     else hi = mid - 1;
   }
   return -1;
@@ -66,11 +71,11 @@ function insertLevelSorted(
     hi = levels.length;
   while (lo < hi) {
     const mid = (lo + hi) >>> 1;
-    const cmp = ascending
-      ? levels[mid].price - newLevel.price
-      : newLevel.price - levels[mid].price;
-    if (cmp < 0) hi = mid;
-    else lo = mid + 1;
+    const shouldStayBefore = ascending
+      ? levels[mid]!.price <= newLevel.price
+      : levels[mid]!.price >= newLevel.price;
+    if (shouldStayBefore) lo = mid + 1;
+    else hi = mid;
   }
   levels.splice(lo, 0, newLevel);
 }
@@ -97,19 +102,7 @@ function estimateMarketCost(levels: PriceLevel[], qty: number): number {
   return cost;
 }
 
-function settleFill(
-  fill: Fill,
-  price: number,
-  incomingUser: User,
-  findUser: (id: string) => User | undefined,
-  incomingSide: OrderSide,
-) {
-  const buyer =
-    incomingSide === "buy" ? incomingUser : findUser(fill.buyOrderId);
-  const seller =
-    incomingSide === "sell" ? incomingUser : findUser(fill.sellOrderId);
-  if (!buyer || !seller) return;
-
+function settleFill(fill: Fill, price: number, buyer: User, seller: User) {
   const cost = price * fill.qty;
 
   buyer.balance.locked -= cost;
@@ -175,7 +168,13 @@ function matchOrder(
         timestamp: Date.now(),
       };
       fills.push(fill);
-      settleFill(fill, level.price, user, findUser, order.side);
+
+      const restingUser = findUser(restingOrder.userId);
+      const buyer = order.side === "buy" ? user : restingUser;
+      const seller = order.side === "sell" ? user : restingUser;
+      if (buyer && seller) {
+        settleFill(fill, level.price, buyer, seller);
+      }
     }
 
     level.orders = level.orders.filter((o) => o.filledQty < o.qty);
@@ -203,9 +202,9 @@ app.post("/signup", (req, res) => {
   //   const hash = bcrypt.hashSync(password, 10);
   // 3. push to USERS
   users.push({
-    id: "u2",
+    id: uuidv4(),
     userName: username,
-    balance: { total: 0, locked: 0 },
+    balance: { total: 0, locked: 0, stocks: {} },
   });
   console.log("Users", users);
   // 4. init BALANCES[userId] with INR: { available: 0, locked: 0 }
@@ -304,14 +303,14 @@ app.post("/order", (req, res) => {
     const ascending = side === "sell";
     const priceNum = Number(newOrder.price);
 
-    let idx = findPriceIndex(restingLevels, priceNum);
+    let idx = findPriceIndex(restingLevels, priceNum, ascending);
     if (idx === -1) {
       insertLevelSorted(
         restingLevels,
         { price: priceNum, qty: 0, orders: [] },
         ascending,
       );
-      idx = findPriceIndex(restingLevels, priceNum);
+      idx = findPriceIndex(restingLevels, priceNum, ascending);
     }
     restingLevels[idx]!.qty += remainingQty;
     restingLevels[idx]!.orders.push({
@@ -323,10 +322,6 @@ app.post("/order", (req, res) => {
   }
 
   res.json({ order: newOrder });
-});
-
-app.get("/stocks", (req, res) => {
-  res.json(stocks);
 });
 
 app.delete("/order/:orderId", (req, res) => {
@@ -360,6 +355,8 @@ app.get("/balance", (req, res) => {
   // return BALANCES[userId] for the authed user
 });
 
-app.listen(8080, () => {
-  console.log(`Server is running at http://localhost:8080`);
-});
+if (process.env.NODE_ENV !== "test") {
+  app.listen(8080, () => {
+    console.log(`Server is running at http://localhost:8080`);
+  });
+}
