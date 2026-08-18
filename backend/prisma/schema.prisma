@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  }
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id       String   @id @default(uuid())
+  name     String
+  password String
+  balance  Balance?
+  orders   Order[]
+}
+
+model Balance {
+  id     String         @id @default(uuid())
+  total  String
+  locked String
+  userId String         @unique
+  user   User           @relation(fields: [userId], references: [id])
+  assets AssetBalance[]
+}
+
+model AssetBalance {
+  id        String  @id @default(uuid())
+  qty       String
+  locked    String
+  balanceId String
+  balance   Balance @relation(fields: [balanceId], references: [id])
+  assetId   String
+  asset     Asset   @relation(fields: [assetId], references: [id])
+
+  @@unique([balanceId, assetId]) // one row per user per stock
+}
+
+model Asset {
+  id            String         @id @default(uuid())
+  title         String
+  symbol        String         @unique
+  assetBalances AssetBalance[]
+  orders        Order[]
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  assetId   String
+  asset     Asset       @relation(fields: [assetId], references: [id])
+  side      Side
+  orderType OrderType
+  price     String
+  qty       Int
+  filledQty Int         @default(0)
+  status    OrderStatus @default(OPEN)
+  timestamp DateTime    @default(now())
+}
+
+model Fill {
+  id          String   @id @default(uuid())
+  assetId     String
+  buyOrderId  String
+  sellOrderId String
+  price       String
+  qty         Int
+  timestamp   DateTime @default(now())
+}
+
+enum Side {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+}
+
+enum OrderStatus {
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+}
