@@ -1,4 +1,11 @@
-import { OrderSide, OrderType, Fill, User, PriceLevel, Order} from "../types.js";
+import {
+  OrderSide,
+  OrderType,
+  Fill,
+  User,
+  PriceLevel,
+  Order,
+} from "../types.js";
 import { fills } from "../index.js";
 import { v4 as uuidv4 } from "uuid";
 
@@ -35,10 +42,11 @@ function matchOrder(
   oppositeLevels: PriceLevel[],
   user: User,
   findUser: (id: string) => User | undefined,
-): { remainingQty: number; spent: number } {
+): { remainingQty: number; spent: number; newFills: Fill[] } {
   let remainingQty = order.qty;
   let spent = 0;
   let i = 0;
+  const newFills: Fill[] = []; // <-- added
 
   while (i < oppositeLevels.length && remainingQty > 0) {
     const level = oppositeLevels[i];
@@ -78,6 +86,7 @@ function matchOrder(
         timestamp: Date.now(),
       };
       fills.push(fill);
+      newFills.push(fill); // <-- added
 
       const restingUser = findUser(restingOrder.userId);
       const buyer = order.side === "buy" ? user : restingUser;
@@ -95,7 +104,7 @@ function matchOrder(
     }
   }
 
-  return { remainingQty, spent };
+  return { remainingQty, spent, newFills };
 }
 
 export { matchOrder };

@@ -14,7 +14,6 @@ import OrderRoute from "./routes/order.route.js";
 
  const app = express();
 app.use(express.json());
-app.use(errorMiddleware);
 
 //In memory database
 
@@ -76,6 +75,7 @@ app.get("/balance", (req, res) => {
   // return BALANCES[userId] for the authed user
 });
 
+app.use(errorMiddleware);
 app.listen(8080, () => {
   console.log(`Server is running at http://localhost:8080`);
 });
