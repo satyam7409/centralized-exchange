@@ -14,6 +14,8 @@ import type {
   OrderJobData,
   OrderJobResult,
 } from "../types.js";
+import { publishOrderbookUpdate, publishTrades, publishUserUpdate } from "./publish.js";
+import { queuePersist } from "./persist.js";
 
 function resolveLeftover(
   newOrder: Order,
@@ -79,8 +81,8 @@ async function startEngineForSymbol(
   new Worker<OrderJobData, OrderJobResult>(
     `orders-${symbol}`,
     async (job) => {
-      console.log("job",job);
-      
+      console.log("job", job);
+
       const { userId, side, orderType, price, qty } = job.data;
 
       const user = findUser(userId);
@@ -139,6 +141,14 @@ async function startEngineForSymbol(
         symbol,
       );
 
+      publishOrderbookUpdate(symbol, book);
+      publishTrades(symbol, newFills);
+      publishUserUpdate(userId, newOrder);
+
+      queuePersist(newOrder, newFills).catch((err) =>
+        console.error(`[${symbol}] failed to enqueue persist job:`, err),
+      );
+
       return { order: newOrder };
     },
     { connection: redis, concurrency: 1 }, // <-- single consumer, this is the whole guarantee
@@ -149,13 +159,12 @@ async function startEngineForSymbol(
 
 async function main() {
   const { users, orderBook, stocks } = await loadState();
-   console.log("state is loaded",users,orderBook,stocks);
-   console.log("orders",orderBook);
-   
-   
+  console.log("state is loaded", users, orderBook, stocks);
+  console.log("orders", orderBook);
+
   for (const stock of stocks) {
     console.log("starting engine called");
-    
+
     await startEngineForSymbol(stock.symbol, users, orderBook);
   }
 }

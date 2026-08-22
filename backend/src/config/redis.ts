@@ -2,11 +2,14 @@ import { Redis } from "ioredis";
 import { Queue,QueueEvents } from "bullmq";
 
 export const redis = new Redis({ host: "localhost", port: 6379,maxRetriesPerRequest: null});
+export const publisher = redis.duplicate();
 
 const queues = new Map<string,Queue>();
 const queueEventsMap = new Map<string,QueueEvents>();
 
 
+
+// order queue
 function queueName(symbol: string) {
   return `orders-${symbol}`;
 }
@@ -23,4 +26,14 @@ export function getQueueEvents(symbol: string): QueueEvents {
     queueEventsMap.set(symbol, new QueueEvents(queueName(symbol), { connection: redis }));
   }
   return queueEventsMap.get(symbol)!;
+}
+
+
+//persist order
+let persistQueue: Queue | null = null;
+export function getPersistQueue(): Queue {
+  if (!persistQueue) {
+    persistQueue = new Queue("persist-orders", { connection: redis });
+  }
+  return persistQueue;
 }

@@ -6,4 +6,3 @@ const queue = new Queue("orders:RELIANCE", {
     port: 6379,
   },
 });
-
