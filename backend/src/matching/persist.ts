@@ -1,7 +1,12 @@
 import { getPersistQueue } from "../config/redis.js";
-import type { Order, Fill } from "../types.js";
+import type { Order, Fill , User} from "../types.js";
 
-export async function queuePersist(order: Order, newFills: Fill[]) {
+interface AffectedBalance {
+  userId: string;
+  balance: User["balance"];
+}
+
+export async function queuePersist(order: Order, newFills: Fill[], affectedBalances: AffectedBalance[]) {
   const queue = getPersistQueue();
-  await queue.add("persist", { order, fills: newFills });
+  await queue.add("persist", { order, fills: newFills, balances: affectedBalances });
 }

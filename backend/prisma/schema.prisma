@@ -37,6 +37,7 @@ model AssetBalance {
   balance   Balance @relation(fields: [balanceId], references: [id])
   assetId   String
   asset     Asset   @relation(fields: [assetId], references: [id])
+  userId    String
 
   @@unique([balanceId, assetId]) // one row per user per stock
 }

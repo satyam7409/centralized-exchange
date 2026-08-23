@@ -68,9 +68,6 @@ export interface StockOrderBook {
 
 export type OrderBook = Record<string, StockOrderBook>;
 
-
-
-
 export interface OrderJobData {
   userId: string;
   side: OrderSide;

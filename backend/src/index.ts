@@ -1,46 +1,10 @@
 import express from "express";
-import type {
-  Stock,
-  User,
-  Order,
-  Fill,
-  OrderBook,
-  PriceLevel,
-  OrderSide,
-  OrderType,
-} from "./types.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import OrderRoute from "./routes/order.route.js";
 
- const app = express();
+const app = express();
 app.use(express.json());
 
-//In memory database
-
-export const users: User[] = [
-  {
-    id: "u1",
-    userName: "Satyam",
-    balance: {
-      total: 10000,
-      locked: 0,
-      stocks: {},
-    },
-  },
-];
-
-export const stocks: Stock[] = [
-  { id: "s1", title: "Reliance Industries", symbol: "RELIANCE" },
-  { id: "s2", title: "Tata Consultancy Services", symbol: "TCS" },
-];
-
-export const orders: Order[] = [];
-export const fills: Fill[] = [];
-
-export const orderBook: OrderBook = {
-  RELIANCE: { asks: [], bids: [] },
-  TCS: { asks: [], bids: [] },
-};
 
 app.use("/order", OrderRoute);
 
@@ -66,9 +30,9 @@ app.get("/fills/:symbol", (req, res) => {
   // recent trades for this stock — the "tape"
 });
 
-app.get("/stocks", (req, res) => {
-  res.json(stocks);
-});
+// app.get("/stocks", (req, res) => {
+//   res.json(stocks);
+// });
 
 // --- User data ---
 app.get("/balance", (req, res) => {

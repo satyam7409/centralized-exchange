@@ -6,7 +6,6 @@ import {
   PriceLevel,
   Order,
 } from "../types.js";
-import { fills } from "../index.js";
 import { v4 as uuidv4 } from "uuid";
 
 function isPriceEligible(
@@ -42,11 +41,12 @@ function matchOrder(
   oppositeLevels: PriceLevel[],
   user: User,
   findUser: (id: string) => User | undefined,
-): { remainingQty: number; spent: number; newFills: Fill[] } {
+): { remainingQty: number; spent: number; newFills: Fill[], touchedUserIds:Set<string> } {
   let remainingQty = order.qty;
   let spent = 0;
   let i = 0;
-  const newFills: Fill[] = []; // <-- added
+  const newFills: Fill[] = [];
+  const touchedUserIds = new Set<string>([user.id])
 
   while (i < oppositeLevels.length && remainingQty > 0) {
     const level = oppositeLevels[i];
@@ -76,6 +76,8 @@ function matchOrder(
       order.filledQty = (order.filledQty ?? 0) + matchQty;
       spent += matchQty * level.price;
 
+      touchedUserIds.add(restingOrder.userId)
+
       const fill: Fill = {
         id: uuidv4(),
         stockId: order.stockId,
@@ -85,7 +87,6 @@ function matchOrder(
         qty: matchQty,
         timestamp: Date.now(),
       };
-      fills.push(fill);
       newFills.push(fill); // <-- added
 
       const restingUser = findUser(restingOrder.userId);
@@ -104,7 +105,7 @@ function matchOrder(
     }
   }
 
-  return { remainingQty, spent, newFills };
+  return { remainingQty, spent, newFills,touchedUserIds};
 }
 
 export { matchOrder };

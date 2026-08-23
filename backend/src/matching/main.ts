@@ -14,7 +14,11 @@ import type {
   OrderJobData,
   OrderJobResult,
 } from "../types.js";
-import { publishOrderbookUpdate, publishTrades, publishUserUpdate } from "./publish.js";
+import {
+  publishOrderbookUpdate,
+  publishTrades,
+  publishUserUpdate,
+} from "./publish.js";
 import { queuePersist } from "./persist.js";
 
 function resolveLeftover(
@@ -124,7 +128,7 @@ async function startEngineForSymbol(
       };
 
       const oppositeLevels = side === "buy" ? book.asks : book.bids;
-      const { remainingQty, spent, newFills } = matchOrder(
+      const { remainingQty, spent, newFills, touchedUserIds } = matchOrder(
         newOrder,
         oppositeLevels,
         user,
@@ -141,13 +145,17 @@ async function startEngineForSymbol(
         symbol,
       );
 
+      // gather current balance snapshot for every affected user
+      const affectedBalances = [...touchedUserIds].map((id) => ({
+        userId: id,
+        balance: findUser(id)!.balance,
+      }));
+
       publishOrderbookUpdate(symbol, book);
       publishTrades(symbol, newFills);
       publishUserUpdate(userId, newOrder);
 
-      queuePersist(newOrder, newFills).catch((err) =>
-        console.error(`[${symbol}] failed to enqueue persist job:`, err),
-      );
+      await queuePersist(newOrder, newFills, affectedBalances);
 
       return { order: newOrder };
     },
