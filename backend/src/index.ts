@@ -1,11 +1,11 @@
 import express from "express";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import OrderRoute from "./routes/order.route.js";
+import { createServer } from "http";
 
 const app = express();
 app.use(express.json());
-
-
+export const server = createServer(app)
 app.use("/order", OrderRoute);
 
 app.delete("/order/:orderId", (req, res) => {
@@ -40,6 +40,6 @@ app.get("/balance", (req, res) => {
 });
 
 app.use(errorMiddleware);
-app.listen(8080, () => {
+server.listen(8080, () => {
   console.log(`Server is running at http://localhost:8080`);
 });
