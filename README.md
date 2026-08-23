@@ -1,17 +1,10 @@
-Centralized Exchanged
-
-
-A centralized exchange (CEX) is a digital asset trading platform run by a single company. It acts as a middleman between buyers and sellers, handles the custody of user funds, and matches trades using an internal order book.
-
-High level arhitecutre
-
-<img width="1578" height="781" alt="Screenshot 2026-08-23 191848" src="https://github.com/user-attachments/assets/910e888c-bd66-4934-9ff9-29e705009d7f" />
-
 # Centralized Exchange Engine
 
 A centralized order-matching exchange (à la Binance/Backpack) built from scratch in TypeScript — covering order placement, a price-time-priority matching engine, durable persistence, crash recovery, and live order book/trade updates over WebSocket.
 
 ## Architecture
+
+<img width="1578" height="781" alt="Screenshot 2026-08-23 191848" src="https://github.com/user-attachments/assets/910e888c-bd66-4934-9ff9-29e705009d7f" />
 
 Client ──HTTP(place order)──> API Layer ──Order Queue──> Matching Engine
 Client ──HTTP(reads)────────> API Layer ──direct query──> Postgres
